@@ -1,0 +1,8 @@
+yoza dev environment:
+
+- start server: 
+  - open node cmd
+  - cd firebase-server
+  - run: node server.js
+
+ 
