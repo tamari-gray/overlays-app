@@ -1,6 +1,7 @@
 <script>
  import { onMount } from 'svelte';
- import { database, ref, onValue } from '../firebase';
+ import { onValue, ref, database } from '../firebase'; // Import Firebase setup
+ import {  } from 'firebase/database'; // Firebase imports
 
  let winPercent = 0;  // Default values
  let name = '';
@@ -14,14 +15,12 @@
      if (snapshot.exists()) {
        const data = snapshot.val();  // Get the raw data
        const prediction = data;  // Get the first item in the 'prediction' object
-       console.log(data);
 
        // Map data to your variables
-       winPercent = prediction.winVotePercentage;  // Convert to percentage
+       winPercent = 90;  // Convert to percentage
        name = prediction.person; // Get the person name
        losePercent = 100 - winPercent; // Calculate the lose percentage
      } else {
-       // Handle the case where data doesn't exist
        console.log("No prediction data found");
      }
    });
@@ -33,10 +32,12 @@
    width: 1440px;
    height: 270px;
    display: flex;
+   position: relative;
+   font-size: 36px;
  }
 
  .win {
-   background-color:#FE4242;
+   background-color: red;
    width: var(--win-width);
    display: flex;
    justify-content: center;
@@ -44,10 +45,11 @@
    color: white;
    font-weight: bold;
    text-align: center;
+   padding: 10px;
  }
 
  .lose {
-   background-color:#31AEF3;
+   background-color: blue;
    width: calc(100% - var(--win-width));
    display: flex;
    justify-content: center;
@@ -55,19 +57,26 @@
    color: white;
    font-weight: bold;
    text-align: center;
+   padding: 10px;
  }
 
- .label {
-   font-size: 36px;
+ /* Hide text when percentage is below 15% */
+ .low-percentage .label-text {
+   display: none;
+ }
+
+ .low-percentage .percentage-text {
    font-weight: bold;
  }
 </style>
 
 <div class="win-percentage" style="--win-width: {winPercent}%">
- <div class="win">
-   <span class="label">{winPercent}% voted {name} wins</span>
+ <div class="win {winPercent < 15 ? 'low-percentage' : ''}">
+   <span class="label-text">{winPercent >= 15 ? `${winPercent}% voted ${name} wins` : ''}</span>
+   <span class="percentage-text">{winPercent < 15 ? `${winPercent}%` : ''}</span>
  </div>
- <div class="lose">
-   <span class="label">{losePercent}% voted {name} loses</span>
+ <div class="lose {losePercent < 15 ? 'low-percentage' : ''}">
+   <span class="label-text">{losePercent >= 15 ? `${losePercent}% voted ${name} loses` : ''}</span>
+   <span class="percentage-text">{losePercent < 15 ? `${losePercent}%` : ''}</span>
  </div>
 </div>
