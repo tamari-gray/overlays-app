@@ -114,7 +114,7 @@ public class CPHInline
                 if (response.IsSuccessStatusCode)
                 {
                     // Success, send a message or log it
-                    CPH.SendMessage("Leaderboard sent successfully!");
+                    // CPH.SendMessage("Leaderboard sent successfully!");
                     return true;
                 }
                 else
@@ -262,7 +262,7 @@ public class CPHInline
 		// Check if there are any votes to display
 		if (votes.Count == 0)
 		{
-			CPH.SendMessage("No votes have been cast yet.");
+			// CPH.SendMessage("No votes have been cast yet.");
 			return false;
 		}
 
@@ -285,7 +285,7 @@ public class CPHInline
 		// Check if there are any votes to calculate percentages
 		if (votes.Count == 0)
 		{
-			CPH.SendMessage("No votes for this predict :)");
+			// CPH.SendMessage("No votes for this predict :)");
 			ResetVotes();
 			return true;
 		}
