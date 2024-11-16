@@ -3,12 +3,10 @@ require('dotenv').config()
 const express = require('express');
 const firebaseAdmin = require('firebase-admin');
 const bodyParser = require('body-parser');
-const path = require('path');
 const app = express();
 
 // Load Firebase service account key
-const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH;
-const serviceAccount = require(path.resolve(serviceAccountPath));
+const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
 
 // Initialize Firebase Admin SDK with Realtime Database
 firebaseAdmin.initializeApp({
