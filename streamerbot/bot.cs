@@ -40,7 +40,7 @@ public class CPHInline
 		}
 		
 		// Set up URL and payload
-		var url = "http://localhost:3000/startPrediction";
+		var url = "https://overlays-app.onrender.com/startPrediction";
 		var payload = JsonConvert.SerializeObject(new { personName });
 
 		using (var client = new HttpClient())
@@ -68,7 +68,7 @@ public class CPHInline
 		int winVotes = votes.Where(vote => vote.VoteType == "win").Count();
 		int winVotePercentage = totalVotes > 0 ? (winVotes * 100) / totalVotes : 0;
 		
-		var url = "http://localhost:3000/updatePrediction";
+		var url = "https://overlays-app.onrender.com/updatePrediction";
 		
 		// Create payload with personName and calculated winVotePercentage
 		var payload = JsonConvert.SerializeObject(new {winVotePercentage });
@@ -94,7 +94,7 @@ public class CPHInline
 	
 	public bool SendLeaderboard()
     {
-        string url = "http://localhost:3000/leaderboard"; // Update with your server URL
+        string url = "https://overlays-app.onrender.com/leaderboard"; // Update with your server URL
 
         // Serialize the leaderboard list to JSON
         var payload = JsonConvert.SerializeObject(new { leaderboard });
