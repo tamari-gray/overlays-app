@@ -7,24 +7,30 @@
  let name = '';
  let losePercent = 0;
 
- // Fetch data from Firebase
  onMount(() => {
-   const predictionRef = ref(database, 'prediction');  // Reference to 'prediction' in Firebase
+  const predictionRef = ref(database, 'prediction'); // Reference to 'prediction' in Firebase
 
-   onValue(predictionRef, (snapshot) => {
-     if (snapshot.exists()) {
-       const data = snapshot.val();  // Get the raw data
-       const prediction = data;  // Get the first item in the 'prediction' object
+  onValue(predictionRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val(); // Get the raw data
+      const prediction = data; // Get the first item in the 'prediction' object
 
-       // Map data to your variables
-       winPercent = prediction.winVotePercentage;  // Convert to percentage
-       name = prediction.person; // Get the person name
-       losePercent = 100 - prediction.winVotePercentage; // Calculate the lose percentage
-     } else {
-       console.log("No prediction data found");
-     }
-   });
- });
+      if (!prediction.winVotePercentage || prediction.winVotePercentage === 0) {
+        // If winVotePercentage is 0 or undefined, set default values
+        winPercent = 50;
+        losePercent = 50;
+      } else {
+        // Map data to your variables
+        winPercent = prediction.winVotePercentage; // Get the win percentage
+        losePercent = 100 - prediction.winVotePercentage; // Calculate the lose percentage
+      }
+
+      name = prediction.person; // Get the person name
+    } else {
+      console.log("No prediction data found");
+    }
+  });
+});
 </script>
 
 <style>
