@@ -17,9 +17,9 @@
        const prediction = data;  // Get the first item in the 'prediction' object
 
        // Map data to your variables
-       winPercent = 90;  // Convert to percentage
+       winPercent = prediction.winVotePercentage;  // Convert to percentage
        name = prediction.person; // Get the person name
-       losePercent = 100 - winPercent; // Calculate the lose percentage
+       losePercent = 100 - prediction.winVotePercentage; // Calculate the lose percentage
      } else {
        console.log("No prediction data found");
      }
