@@ -47,17 +47,18 @@ public class CPHInline
 		{
 			var content = new StringContent(payload, Encoding.UTF8, "application/json");
 			var response = client.PostAsync(url, content).Result;
+			return true;
 
-			if (response.IsSuccessStatusCode)
-			{
-				CPH.SendMessage("Prediction request sent successfully!");
-				return true;
-			}
-			else
-			{
-				CPH.SendMessage("Failed to send prediction request.");
-				return false;
-			}
+			// if (response.IsSuccessStatusCode)
+			// {
+			// 	CPH.SendMessage("Prediction request sent successfully!");
+			// 	return true;
+			// }
+			// else
+			// {
+			// 	CPH.SendMessage("Failed to send prediction request.");
+			// 	return false;
+			// }
 		}
 	}
     
@@ -77,17 +78,18 @@ public class CPHInline
 		{
 			var content = new StringContent(payload, Encoding.UTF8, "application/json");
 			var response = client.PostAsync(url, content).Result;
+			return true;
 			
-			if (response.IsSuccessStatusCode)
-			{
-				CPH.SendMessage("Prediction request sent successfully!");
-				return true;
-			}
-			else
-			{
-				CPH.SendMessage("Failed to send prediction request.");
-				return false;
-			}
+			// if (response.IsSuccessStatusCode)
+			// {
+			// 	CPH.SendMessage("Prediction request sent successfully!");
+			// 	return true;
+			// }
+			// else
+			// {
+			// 	CPH.SendMessage("Failed to send prediction request.");
+			// 	return false;
+			// }
 		}
 		
 	}
