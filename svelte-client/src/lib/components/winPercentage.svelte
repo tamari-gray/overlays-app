@@ -15,8 +15,8 @@
       const data = snapshot.val(); // Get the raw data
       const prediction = data; // Get the first item in the 'prediction' object
 
-      if (!prediction.winVotePercentage || prediction.winVotePercentage === 0) {
-        // If winVotePercentage is 0 or undefined, set default values
+      // If winVotePercentage is undefined - so no votes have been cast, set default values
+      if (!prediction.winVotePercentage) {
         winPercent = 50;
         losePercent = 50;
       } else {
