@@ -77,12 +77,34 @@
 </style>
 
 <div class="win-percentage" style="--win-width: {winPercent}%">
- <div class="win {winPercent < 15 ? 'low-percentage' : ''}">
-   <span class="label-text">{winPercent >= 15 ? `${winPercent}% voted ${name} wins` : ''}</span>
-   <span class="percentage-text">{winPercent < 15 ? `${winPercent}%` : ''}</span>
- </div>
- <div class="lose {losePercent < 15 ? 'low-percentage' : ''}">
-   <span class="label-text">{losePercent >= 15 ? `${losePercent}% voted ${name} loses` : ''}</span>
-   <span class="percentage-text">{losePercent < 15 ? `${losePercent}%` : ''}</span>
- </div>
+  {#if winPercent === 100}
+    <!-- Only show the win bar when winPercent is 100 -->
+    <div class="win">
+      <span class="label-text">100% voted {name} wins</span>
+    </div>
+  {:else if losePercent === 100}
+    <!-- Only show the lose bar when losePercent is 100 -->
+    <div class="lose">
+      <span class="label-text">100% voted {name} loses</span>
+    </div>
+  {:else}
+    <!-- Normal rendering when neither percentage is 100 -->
+    <div class="win {winPercent < 15 ? 'low-percentage' : ''}">
+      <span class="label-text">
+        {winPercent >= 15 ? `${winPercent}% voted ${name} wins` : ''}
+      </span>
+      <span class="percentage-text">
+        {winPercent < 15 ? `${winPercent}%` : ''}
+      </span>
+    </div>
+    <div class="lose {losePercent < 15 ? 'low-percentage' : ''}">
+      <span class="label-text">
+        {losePercent >= 15 ? `${losePercent}% voted ${name} loses` : ''}
+      </span>
+      <span class="percentage-text">
+        {losePercent < 15 ? `${losePercent}%` : ''}
+      </span>
+    </div>
+  {/if}
 </div>
+
