@@ -1,37 +1,40 @@
 <script>
- import { onMount } from 'svelte';
- import { onValue, ref, database } from '../firebase'; // Import Firebase setup
- import {  } from 'firebase/database'; // Firebase imports
+  import { onMount } from 'svelte';
+  import { onValue, ref, database } from '../firebase'; // Import Firebase setup
 
- let winPercent = 0;  // Default values
- let name = '';
- let losePercent = 0;
+  let winPercent = 0; // Default values
+  let name = '';
+  let losePercent = 0;
 
- onMount(() => {
-  const predictionRef = ref(database, 'prediction'); // Reference to 'prediction' in Firebase
+  onMount(() => {
+    const predictionRef = ref(database, 'prediction'); // Reference to 'prediction' in Firebase
 
-  onValue(predictionRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const data = snapshot.val(); // Get the raw data
-      const prediction = data; // Get the first item in the 'prediction' object
+    onValue(predictionRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val(); // Get the raw data
+        const prediction = data; // Extract the prediction object
 
-      // If winVotePercentage is undefined - so no votes have been cast, set default values
-      if (!prediction.winVotePercentage) {
-        winPercent = 50;
-        losePercent = 50;
+        // Check for both winVotePercentage and loseVotePercentage
+        if (
+          prediction.winVotePercentage == null || 
+          prediction.loseVotePercentage == null
+        ) {
+          winPercent = 50;
+          losePercent = 50;
+        } else {
+          // Use the values from Firebase
+          winPercent = prediction.winVotePercentage;
+          losePercent = prediction.loseVotePercentage;
+        }
+
+        name = prediction.person || ''; // Use an empty string as fallback for name
       } else {
-        // Map data to your variables
-        winPercent = prediction.winVotePercentage; // Get the win percentage
-        losePercent = 100 - prediction.winVotePercentage; // Calculate the lose percentage
+        console.log("No prediction data found");
       }
-
-      name = prediction.person; // Get the person name
-    } else {
-      console.log("No prediction data found");
-    }
+    });
   });
-});
 </script>
+
 
 <style>
  .win-percentage {

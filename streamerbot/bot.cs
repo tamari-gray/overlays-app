@@ -62,37 +62,52 @@ public class CPHInline
 		}
 	}
     
-    public bool SendVotePercentage()
-	{
-		// Calculate the win vote percentage
-		int totalVotes = votes.Count;
-		int winVotes = votes.Where(vote => vote.VoteType == "win").Count();
-		int winVotePercentage = totalVotes > 0 ? (winVotes * 100) / totalVotes : 0;
-		
-		var url = "https://overlays-app.onrender.com/updatePrediction";
-		
-		// Create payload with personName and calculated winVotePercentage
-		var payload = JsonConvert.SerializeObject(new {winVotePercentage });
+ public bool SendVotePercentage()
+{
+    // Calculate total votes, win votes, and lose votes
+    int totalVotes = votes.Count;
+    int winVotes = votes.Where(vote => vote.VoteType == "win").Count();
+    int loseVotes = totalVotes - winVotes;
 
-		using (var client = new HttpClient())
-		{
-			var content = new StringContent(payload, Encoding.UTF8, "application/json");
-			var response = client.PostAsync(url, content).Result;
-			return true;
-			
-			// if (response.IsSuccessStatusCode)
-			// {
-			// 	CPH.SendMessage("Prediction request sent successfully!");
-			// 	return true;
-			// }
-			// else
-			// {
-			// 	CPH.SendMessage("Failed to send prediction request.");
-			// 	return false;
-			// }
-		}
-		
-	}
+    // Calculate win and lose vote percentages
+    int winVotePercentage = totalVotes > 0 ? (winVotes * 100) / totalVotes : 0;
+    int loseVotePercentage = totalVotes > 0 ? (loseVotes * 100) / totalVotes : 0;
+
+    var url = "https://overlays-app.onrender.com/updatePrediction";
+
+    // Create payload with winVotePercentage and loseVotePercentage
+    var payload = JsonConvert.SerializeObject(new 
+    {
+        winVotePercentage,
+        loseVotePercentage
+    });
+
+    using (var client = new HttpClient())
+    {
+        try
+        {
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = client.PostAsync(url, content).Result;
+
+            if (response.IsSuccessStatusCode)
+            {
+                // CPH.SendMessage("Vote percentages sent successfully!");
+                return true;
+            }
+            else
+            {
+                // CPH.SendMessage("Failed to send vote percentages.");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            // CPH.SendMessage($"Error sending vote percentages: {ex.Message}");
+            return false;
+        }
+    }
+}
+
 	
 	public bool SendLeaderboard()
     {

@@ -50,25 +50,36 @@ app.post('/startPrediction', async (req, res) => {
 app.post('/updatePrediction', async (req, res) => {
   console.log("Received /updatePrediction request with payload:", req.body);
 
-  const { winVotePercentage } = req.body;
+  const { winVotePercentage, loseVotePercentage } = req.body;
 
-  if (typeof winVotePercentage !== 'number') {
-    console.error("Error: 'winVotePercentage' is missing or invalid in the payload.");
-    return res.status(400).json({ error: 'winVotePercentage is required and must be a number' });
+  // Validate payload
+  if (typeof winVotePercentage !== 'number' || typeof loseVotePercentage !== 'number') {
+    console.error("Error: 'winVotePercentage' or 'loseVotePercentage' is missing or invalid in the payload.");
+    return res.status(400).json({
+      error: "'winVotePercentage' and 'loseVotePercentage' are required and must be numbers",
+    });
   }
 
   try {
-    // Updating winVotePercentage at the root level under 'prediction'
+    // Reference to the 'prediction' node in Firebase
     const predictionRef = db.ref('prediction');
-    await predictionRef.update({ winVotePercentage });
 
-    console.log(`Updated winVotePercentage to ${winVotePercentage}%`);
-    res.status(200).json({ message: `Win percentage updated` });
+    // Update both percentages
+    await predictionRef.update({
+      winVotePercentage,
+      loseVotePercentage,
+    });
+
+    console.log(
+      `Updated winVotePercentage to ${winVotePercentage}% and loseVotePercentage to ${loseVotePercentage}%`
+    );
+    res.status(200).json({ message: `Win and lose percentages updated` });
   } catch (error) {
-    console.error("Error updating winVotePercentage in Firebase Realtime Database:", error);
-    res.status(500).json({ error: 'Failed to update win percentage' });
+    console.error("Error updating percentages in Firebase Realtime Database:", error);
+    res.status(500).json({ error: 'Failed to update percentages' });
   }
 });
+
 
 app.post('/leaderboard', async (req, res) => {
   console.log("Received leaderboard data:", req.body);
