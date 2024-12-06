@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "firebase": "^11.0.2",
-    "svelte-routing": "^2.13.0"
+    "svelte-routing": "^2.13.0",
+    "three": "^0.171.0"
   }
 }
