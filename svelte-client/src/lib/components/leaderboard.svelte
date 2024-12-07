@@ -1,115 +1,165 @@
 <script lang="ts">
- import { onMount } from 'svelte';
- import { database, ref, onValue } from '../firebase'; // Adjust path to firebase.ts if needed
+  import { onMount } from 'svelte';
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+  import { database, ref, onValue } from '../firebase'; // Adjust the path to your Firebase file
 
- // Define types
- type LeaderboardItem = {
-   rank: number;
-   name: string;
-   points: number;
- };
+  // Define types
+  type LeaderboardItem = {
+    rank: number;
+    name: string;
+    points: number;
+  };
 
- // Type for data structure from Firebase
- type LeaderboardFirebaseItem = {
-   Username: string;
-   Points: number;
- };
+  // Type for data structure from Firebase
+  type LeaderboardFirebaseItem = {
+    Username: string;
+    Points: number;
+  };
 
- let leaderboard: LeaderboardItem[] = [];
+  // Leaderboard data array
+  let leaderboard: LeaderboardItem[] = [];
 
- // Fetch data when the component mounts
- onMount(() => {
-   const leaderboardRef = ref(database, 'leaderboard'); // Reference to the leaderboard data in Firebase
+  let sceneContainer: HTMLDivElement | null = null;
 
-   // Listen for changes in the leaderboard data
-   onValue(leaderboardRef, (snapshot) => {
-     if (snapshot.exists()) {
-       // Get the raw data from Firebase and assert its type
-       const data = snapshot.val() as Record<string, LeaderboardFirebaseItem>;
+  onMount(() => {
+    if (sceneContainer) {
+      // Initialize Three.js Scene
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.z = 5;
 
-       // Map the data to the leaderboard format
-       leaderboard = Object.values(data).map((item, index) => ({
-         rank: index + 1, // Calculate the rank based on the position in the array
-         name: item.Username, // Assuming "Username" is the field for player names
-         points: item.Points, // Assuming "Points" is the field for player points
-       }));
-     } else {
-       leaderboard = [];
-     }
-   });
- });
+      const renderer = new THREE.WebGLRenderer({
+        alpha: true, // Enable transparency
+        antialias: true,
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0); // Transparent background
+      sceneContainer.appendChild(renderer.domElement);
+
+      // Load GLTF Model
+      const loader = new GLTFLoader();
+      loader.load(
+        '/leaderboard.glb',
+        (gltf) => {
+          console.log('Model loaded:', gltf);
+          const model = gltf.scene;
+
+          // Traverse the model and find the "board" mesh
+          model.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              const mesh = child as THREE.Mesh;
+              
+              console.log('Mesh Material:', mesh.material); // Log to inspect the material type
+
+              // Check if the material is an array
+              if (Array.isArray(mesh.material)) {
+                console.log('yo - Array of materials:', mesh.material);  // Log the array of materials
+                mesh.material.forEach((material) => {
+                  if (material instanceof THREE.MeshStandardMaterial) {
+                    console.log('yo - Found MeshStandardMaterial in array');
+                    
+                    // Create a new MeshBasicMaterial and copy relevant properties
+                    const newMaterial = new THREE.MeshBasicMaterial({
+                      map: material.map, // Retain the texture map
+                      transparent: material.transparent,
+                      opacity: material.opacity,
+                      color: material.color, // Preserve color if needed
+                    });
+
+                    // Replace the material with MeshBasicMaterial
+                    mesh.material = newMaterial;
+                  }
+                });
+              } else if (mesh.material instanceof THREE.MeshStandardMaterial) {
+                console.log('yo - Found single MeshStandardMaterial:', mesh.material); // Log the single material
+                
+                // Create a new MeshBasicMaterial and copy relevant properties
+                const newMaterial = new THREE.MeshBasicMaterial({
+                  map: mesh.material.map, // Retain the texture map
+                  transparent: mesh.material.transparent,
+                  opacity: mesh.material.opacity,
+                  color: mesh.material.color, // Preserve color if needed
+                });
+
+                // Replace the material with MeshBasicMaterial
+                mesh.material = newMaterial;
+              } else {
+                console.log('yo - Other material type', mesh.material); // Log if it's another material type
+              }
+            }
+          });
+
+          // Adjust scale and position of the model
+          model.scale.set(1, 1, 1);
+          model.position.set(14, -2, 6); // Center the model
+          scene.add(model);
+        },
+        (progress) => {
+          console.log(`Loading: ${(progress.loaded / progress.total) * 100}%`);
+        },
+        (error) => {
+          console.error('Error loading GLTF model:', error);
+        }
+      );
+
+      // Animation loop
+      const animate = () => {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // Handle resizing
+      const handleResize = () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      };
+      window.addEventListener('resize', handleResize);
+
+      // Cleanup
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        sceneContainer?.removeChild(renderer.domElement);
+      };
+    }
+
+    // Fetch leaderboard data from Firebase
+    const leaderboardRef = ref(database, 'leaderboard'); // Reference to the leaderboard data in Firebase
+    onValue(leaderboardRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val() as Record<string, LeaderboardFirebaseItem>;
+        leaderboard = Object.values(data).map((item, index) => ({
+          rank: index + 1,
+          name: item.Username,
+          points: item.Points,
+        }));
+      } else {
+        leaderboard = [];
+      }
+    });
+  });
 </script>
 
 <style>
- /* Fullscreen layout for the leaderboard */
- .leaderboard {
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-   justify-content: flex-start;
-   width: 480px;
-   height: 100vh;
-   font-family: 'Burbank Big Condensed', sans-serif;
-   background-color: #f0f0f0;
-   padding: 20px;
-   box-sizing: border-box;
-   margin: 0 auto; /* Centers the leaderboard horizontally */
- }
+  /* Fullscreen container for Three.js */
+  .scene-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent; /* Ensure the container background is transparent */
+    overflow: hidden;
+  }
 
- .title {
-   font-size: 3rem;
-   margin-bottom: 2rem;
-   font-weight: bold;
-   position: sticky;
-   top: 0;
-   background-color: #f0f0f0;
-   padding: 10px 0;
-   width: 100%;
-   z-index: 10;
-   text-align: center;
- }
-
- .board-list {
-   overflow-y: auto;
-   width: 100%;
-   height: calc(100vh - 120px); /* Adjust to fit within the available height after the title */
- }
-
- .board-item {
-   font-size: 1.5rem;
-   display: flex;
-   justify-content: space-between;
-   width: 100%;
-   padding: 10px 0;
-   border-bottom: 1px solid #ddd;
-   align-items: center;
- }
-
- .rank {
-   width: 20%;
-   text-align: center;
- }
-
- .name {
-   width: 50%;
-   text-align: center;
- }
-
- .points {
-   width: 30%;
-   text-align: center;
- }
 </style>
 
-<div class="leaderboard">
- <div class="title">Leaderboard</div>
- <div class="board-list">
-   {#each leaderboard as { rank, name, points }}
-     <div class="board-item">
-       <div class="rank">{rank}</div>
-       <div class="name">{name}</div>
-       <div class="points">{points} pts</div>
-     </div>
-   {/each}
- </div>
-</div>
+<!-- Fullscreen Transparent Three.js scene -->
+<div bind:this={sceneContainer} class="scene-container"></div>
