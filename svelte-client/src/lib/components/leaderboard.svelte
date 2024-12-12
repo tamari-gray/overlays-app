@@ -3,6 +3,7 @@
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
   import { database, ref, onValue } from '../firebase'; // Adjust the path to your Firebase file
+  import { createCanvasTexture, applyTextureToMesh } from '../utils/meshHelpers';
 
   // Define types
   type LeaderboardItem = {
@@ -20,7 +21,10 @@
   // Leaderboard data array
   let leaderboard: LeaderboardItem[] = [];
 
+  // container for three.js scene
   let sceneContainer: HTMLDivElement | null = null;
+
+
 
   onMount(() => {
     if (sceneContainer) {
@@ -42,10 +46,14 @@
       renderer.setClearColor(0x000000, 0); // Transparent background
       sceneContainer.appendChild(renderer.domElement);
 
+      // create canvas
+
+      
+
       // Load GLTF Model
       const loader = new GLTFLoader();
       loader.load(
-        '/leaderboard.glb',
+        '/new-leaderboard.glb',
         (gltf) => {
           console.log('Model loaded:', gltf);
           const model = gltf.scene;
@@ -54,50 +62,58 @@
           model.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
-              
-              console.log('Mesh Material:', mesh.material); // Log to inspect the material type
 
-              // Check if the material is an array
               if (Array.isArray(mesh.material)) {
-                console.log('yo - Array of materials:', mesh.material);  // Log the array of materials
-                mesh.material.forEach((material) => {
+                // console.log('Array of materials:', mesh.material); // Log the array of materials
+                mesh.material.forEach((material, index) => {
                   if (material instanceof THREE.MeshStandardMaterial) {
-                    console.log('yo - Found MeshStandardMaterial in array');
-                    
+                    console.log('Found MeshStandardMaterial in array');
+
                     // Create a new MeshBasicMaterial and copy relevant properties
                     const newMaterial = new THREE.MeshBasicMaterial({
-                      map: material.map, // Retain the texture map
+                      map: material.map,
                       transparent: material.transparent,
                       opacity: material.opacity,
-                      color: material.color, // Preserve color if needed
+                      color: material.color,
                     });
 
-                    // Replace the material with MeshBasicMaterial
-                    mesh.material = newMaterial;
+                    mesh.material = newMaterial; // Replace material in the array
                   }
                 });
               } else if (mesh.material instanceof THREE.MeshStandardMaterial) {
-                console.log('yo - Found single MeshStandardMaterial:', mesh.material); // Log the single material
-                
-                // Create a new MeshBasicMaterial and copy relevant properties
+
                 const newMaterial = new THREE.MeshBasicMaterial({
-                  map: mesh.material.map, // Retain the texture map
+                  map: mesh.material.map,
                   transparent: mesh.material.transparent,
                   opacity: mesh.material.opacity,
-                  color: mesh.material.color, // Preserve color if needed
+                  color: mesh.material.color,
                 });
 
-                // Replace the material with MeshBasicMaterial
                 mesh.material = newMaterial;
               } else {
-                console.log('yo - Other material type', mesh.material); // Log if it's another material type
+                console.log('Other material type:', mesh.material);
+              }
+
+              // Apply texture dynamically using the helper functions
+              if (mesh.name === 'first') {
+                console.log("yeet first",mesh);
+                const firstTexture = createCanvasTexture('#1st @username 10pts');
+                applyTextureToMesh(mesh, firstTexture);
+              } else if (mesh.name === 'second') {
+                const secondTexture = createCanvasTexture('#2nd @user 8pts');
+                applyTextureToMesh(mesh, secondTexture);
+              } else if (mesh.name === 'third') {
+                const thirdTexture = createCanvasTexture('#3rd @player 6pts');
+                applyTextureToMesh(mesh, thirdTexture)
               }
             }
           });
 
+
           // Adjust scale and position of the model
           model.scale.set(1, 1, 1);
-          model.position.set(14, -2, 6); // Center the model
+          model.position.set(0,-1.5,3.5);
+          model.rotation.set(0.2,0,0)
           scene.add(model);
         },
         (progress) => {
