@@ -3,7 +3,7 @@
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
   import { database, ref, onValue } from '../firebase'; // Adjust the path to your Firebase file
-  import { createCanvasTexture, applyTextureToMesh } from '../utils/meshHelpers';
+  import { createCanvasTexture, createSecondCanvasTexture, createThirdCanvasTexture, applyTextureToMesh } from '../utils/meshHelpers';
 
   // Define types
   type LeaderboardItem = {
@@ -30,25 +30,28 @@
     if (sceneContainer) {
       // Initialize Three.js Scene
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
+      const aspectRatio = window.innerWidth / window.innerHeight;
+      const viewHeight = 1; // Adjust based on your scene scale
+      const camera = new THREE.OrthographicCamera(
+        -aspectRatio * viewHeight, // left
+        aspectRatio * viewHeight,  // right
+        viewHeight,                // top
+        -viewHeight,               // bottom
+        0.1,                       // near
+        40                         // far
       );
-      camera.position.z = 5;
+      camera.position.z = 5; // Set camera position to view the plane
 
       const renderer = new THREE.WebGLRenderer({
         alpha: true, // Enable transparency
         antialias: true,
       });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0x000000, 0); // Transparent background
-      sceneContainer.appendChild(renderer.domElement);
-
-      // create canvas
 
       
+      renderer.setSize(window.innerWidth,window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio || 1);
+      renderer.setClearColor(0x000000, 0); // Transparent background
+      sceneContainer.appendChild(renderer.domElement);
 
       // Load GLTF Model
       const loader = new GLTFLoader();
@@ -64,7 +67,7 @@
               const mesh = child as THREE.Mesh;
 
               if (Array.isArray(mesh.material)) {
-                // console.log('Array of materials:', mesh.material); // Log the array of materials
+                // Log the array of materials
                 mesh.material.forEach((material, index) => {
                   if (material instanceof THREE.MeshStandardMaterial) {
                     console.log('Found MeshStandardMaterial in array');
@@ -81,7 +84,6 @@
                   }
                 });
               } else if (mesh.material instanceof THREE.MeshStandardMaterial) {
-
                 const newMaterial = new THREE.MeshBasicMaterial({
                   map: mesh.material.map,
                   transparent: mesh.material.transparent,
@@ -96,24 +98,23 @@
 
               // Apply texture dynamically using the helper functions
               if (mesh.name === 'first') {
-                console.log("yeet first",mesh);
-                const firstTexture = createCanvasTexture('#1st @username 10pts');
+                console.log("yeet first", mesh);
+                const firstTexture = createCanvasTexture('#1st', 'Azulaspurp', '10pts');
                 applyTextureToMesh(mesh, firstTexture);
               } else if (mesh.name === 'second') {
-                const secondTexture = createCanvasTexture('#2nd @user 8pts');
+                const secondTexture = createSecondCanvasTexture('#2nd', 'Kawaiifreak97mynigga', '5pts');
                 applyTextureToMesh(mesh, secondTexture);
               } else if (mesh.name === 'third') {
-                const thirdTexture = createCanvasTexture('#3rd @player 6pts');
-                applyTextureToMesh(mesh, thirdTexture)
+                const thirdTexture = createThirdCanvasTexture('#3rd', 'Zeehyun', '3pts');
+                applyTextureToMesh(mesh, thirdTexture);
               }
             }
           });
 
-
           // Adjust scale and position of the model
-          model.scale.set(1, 1, 1);
-          model.position.set(0,-1.5,3.5);
-          model.rotation.set(0.2,0,0)
+          model.scale.set(1.2, 1.2, 1.2);
+          model.position.set(0, -1.8, 2.8);
+          model.rotation.set(0, 0, 0);
           scene.add(model);
         },
         (progress) => {
@@ -131,17 +132,17 @@
       };
       animate();
 
-      // Handle resizing
-      const handleResize = () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-      };
-      window.addEventListener('resize', handleResize);
+      // // Handle resizing
+      // const handleResize = () => {
+      //   renderer.setSize(window.innerWidth, window.innerHeight);
+      //   camera.aspect = window.innerWidth / window.innerHeight;
+      //   camera.updateProjectionMatrix();
+      // };
+      // window.addEventListener('resize', handleResize);
 
       // Cleanup
       return () => {
-        window.removeEventListener('resize', handleResize);
+        // window.removeEventListener('resize', handleResize);
         sceneContainer?.removeChild(renderer.domElement);
       };
     }
@@ -161,6 +162,7 @@
       }
     });
   });
+
 </script>
 
 <style>
