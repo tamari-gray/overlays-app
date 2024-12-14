@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as THREE from 'three';
+  import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+  import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-  import { database, ref, onValue } from '../firebase'; // Adjust the path to your Firebase file
-  import { createCanvasTexture, createSecondCanvasTexture, createThirdCanvasTexture, applyTextureToMesh } from '../utils/meshHelpers';
+  import { database, ref, onValue } from '../firebase'; // Adjust path if needed
 
   // Define types
   type LeaderboardItem = {
@@ -12,172 +13,284 @@
     points: number;
   };
 
-  // Type for data structure from Firebase
   type LeaderboardFirebaseItem = {
     Username: string;
     Points: number;
   };
 
-  // Leaderboard data array
   let leaderboard: LeaderboardItem[] = [];
-
-  // container for three.js scene
   let sceneContainer: HTMLDivElement | null = null;
 
+  let scene: THREE.Scene;
+  let camera: THREE.OrthographicCamera;
+  let renderer: THREE.WebGLRenderer;
 
+  let firstMesh: THREE.Mesh | undefined;
+  let secondMesh: THREE.Mesh | undefined;
+  let thirdMesh: THREE.Mesh | undefined;
 
-  onMount(() => {
-    if (sceneContainer) {
-      // Initialize Three.js Scene
-      const scene = new THREE.Scene();
-      const aspectRatio = window.innerWidth / window.innerHeight;
-      const viewHeight = 1; // Adjust based on your scene scale
-      const camera = new THREE.OrthographicCamera(
-        -aspectRatio * viewHeight, // left
-        aspectRatio * viewHeight,  // right
-        viewHeight,                // top
-        -viewHeight,               // bottom
-        0.1,                       // near
-        40                         // far
-      );
-      camera.position.z = 5; // Set camera position to view the plane
+  let font: Font | undefined;
+  let textMaterial: THREE.MeshBasicMaterial;
+  let textParams: {
+    font: Font;
+    size: number;
+    depth: number;
+    curveSegments: number;
+  };
 
-      const renderer = new THREE.WebGLRenderer({
-        alpha: true, // Enable transparency
-        antialias: true,
-      });
+  const leaderboardRef = ref(database, 'leaderboard');
 
-      
-      renderer.setSize(window.innerWidth,window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio || 1);
-      renderer.setClearColor(0x000000, 0); // Transparent background
-      sceneContainer.appendChild(renderer.domElement);
-
-      // Load GLTF Model
-      const loader = new GLTFLoader();
-      loader.load(
-        '/new-leaderboard.glb',
-        (gltf) => {
-          console.log('Model loaded:', gltf);
-          const model = gltf.scene;
-
-          // Traverse the model and find the "board" mesh
-          model.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-              const mesh = child as THREE.Mesh;
-
-              if (Array.isArray(mesh.material)) {
-                // Log the array of materials
-                mesh.material.forEach((material, index) => {
-                  if (material instanceof THREE.MeshStandardMaterial) {
-                    console.log('Found MeshStandardMaterial in array');
-
-                    // Create a new MeshBasicMaterial and copy relevant properties
-                    const newMaterial = new THREE.MeshBasicMaterial({
-                      map: material.map,
-                      transparent: material.transparent,
-                      opacity: material.opacity,
-                      color: material.color,
-                    });
-
-                    mesh.material = newMaterial; // Replace material in the array
-                  }
-                });
-              } else if (mesh.material instanceof THREE.MeshStandardMaterial) {
-                const newMaterial = new THREE.MeshBasicMaterial({
-                  map: mesh.material.map,
-                  transparent: mesh.material.transparent,
-                  opacity: mesh.material.opacity,
-                  color: mesh.material.color,
-                });
-
-                mesh.material = newMaterial;
-              } else {
-                console.log('Other material type:', mesh.material);
-              }
-
-              // Apply texture dynamically using the helper functions
-              if (mesh.name === 'first') {
-                console.log("yeet first", mesh);
-                const firstTexture = createCanvasTexture('#1st', 'Azulaspurp', '10pts');
-                applyTextureToMesh(mesh, firstTexture);
-              } else if (mesh.name === 'second') {
-                const secondTexture = createSecondCanvasTexture('#2nd', 'Kawaiifreak97mynigga', '5pts');
-                applyTextureToMesh(mesh, secondTexture);
-              } else if (mesh.name === 'third') {
-                const thirdTexture = createThirdCanvasTexture('#3rd', 'Zeehyun', '3pts');
-                applyTextureToMesh(mesh, thirdTexture);
-              }
-            }
-          });
-
-          // Adjust scale and position of the model
-          model.scale.set(1.2, 1.2, 1.2);
-          model.position.set(0, -1.8, 2.8);
-          model.rotation.set(0, 0, 0);
-          scene.add(model);
-        },
-        (progress) => {
-          console.log(`Loading: ${(progress.loaded / progress.total) * 100}%`);
-        },
-        (error) => {
-          console.error('Error loading GLTF model:', error);
-        }
-      );
-
-      // Animation loop
-      const animate = () => {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // // Handle resizing
-      // const handleResize = () => {
-      //   renderer.setSize(window.innerWidth, window.innerHeight);
-      //   camera.aspect = window.innerWidth / window.innerHeight;
-      //   camera.updateProjectionMatrix();
-      // };
-      // window.addEventListener('resize', handleResize);
-
-      // Cleanup
-      return () => {
-        // window.removeEventListener('resize', handleResize);
-        sceneContainer?.removeChild(renderer.domElement);
-      };
+  // Listen to Firebase updates
+  onValue(leaderboardRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val() as LeaderboardFirebaseItem[];
+      leaderboard = data.map((item, index) => ({
+        rank: index + 1,
+        name: item.Username,
+        points: item.Points,
+      }));
+    } else {
+      leaderboard = [];
     }
+    console.log('Leaderboard updated:', leaderboard);
 
-    // Fetch leaderboard data from Firebase
-    const leaderboardRef = ref(database, 'leaderboard'); // Reference to the leaderboard data in Firebase
-    onValue(leaderboardRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val() as Record<string, LeaderboardFirebaseItem>;
-        leaderboard = Object.values(data).map((item, index) => ({
-          rank: index + 1,
-          name: item.Username,
-          points: item.Points,
-        }));
-      } else {
-        leaderboard = [];
-      }
-    });
+    // Update text in the scene after leaderboard updates
+    updateLeaderboardText();
   });
 
+  onMount(() => {
+    if (!sceneContainer) return;
+
+    // Set up scene, camera, renderer
+    scene = new THREE.Scene();
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    const viewHeight = 1;
+    camera = new THREE.OrthographicCamera(
+      -aspectRatio * viewHeight,
+       aspectRatio * viewHeight,
+       viewHeight,
+      -viewHeight,
+       0.1,
+       40
+    );
+    camera.position.z = 5;
+
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setClearColor(0x000000, 0);
+    sceneContainer.appendChild(renderer.domElement);
+
+    const loader = new GLTFLoader();
+    loader.load(
+      '/new-leaderboard.glb',
+      (gltf) => {
+        const model = gltf.scene;
+
+        // Convert materials and find our meshes
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+
+            // Convert materials to MeshBasicMaterial
+            if (Array.isArray(mesh.material)) {
+              mesh.material = mesh.material.map((material: any) => {
+                if (
+                  material instanceof THREE.MeshStandardMaterial ||
+                  material instanceof THREE.MeshPhongMaterial ||
+                  material instanceof THREE.MeshLambertMaterial
+                ) {
+                  return new THREE.MeshBasicMaterial({
+                    map: material.map,
+                    transparent: material.transparent,
+                    opacity: material.opacity,
+                    color: material.color,
+                  });
+                }
+                return material;
+              });
+            } else if (
+              mesh.material instanceof THREE.MeshStandardMaterial ||
+              mesh.material instanceof THREE.MeshPhongMaterial ||
+              mesh.material instanceof THREE.MeshLambertMaterial
+            ) {
+              mesh.material = new THREE.MeshBasicMaterial({
+                map: mesh.material.map,
+                transparent: mesh.material.transparent,
+                opacity: mesh.material.opacity,
+                color: mesh.material.color,
+              });
+            }
+
+            // Identify the board meshes
+            if (mesh.name === 'first') firstMesh = mesh;
+            if (mesh.name === 'second') secondMesh = mesh;
+            if (mesh.name === 'third') thirdMesh = mesh;
+          }
+        });
+
+        model.scale.set(1.2, 1.2, 1.2);
+        model.position.set(0, -1, -2);
+        scene.add(model);
+
+        // Load the font after the model is added
+        const fontLoader = new FontLoader();
+        fontLoader.load(
+          '/fonts/burbank.json',
+          (loadedFont) => {
+            font = loadedFont;
+            textParams = {
+              font: font,
+              size: 0.04,
+              depth: 0.005,
+              curveSegments: 12,
+            };
+            textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            // Render loop
+            const animate = () => {
+              requestAnimationFrame(animate);
+              renderer.render(scene, camera);
+            };
+            animate();
+
+            // Once everything is ready, we can update the text based on current leaderboard data
+            updateLeaderboardText();
+          },
+          (error) => {
+            console.error('Error loading font:', error);
+          }
+        );
+      },
+      (progress) => {
+        console.log(`Loading: ${(progress.loaded / progress.total) * 100}%`);
+      },
+      (error) => {
+        console.error('Error loading GLTF model:', error);
+      }
+    );
+
+    // Cleanup on unmount
+    return () => {
+      sceneContainer?.removeChild(renderer.domElement);
+    };
+  });
+
+  function clearOldText(mesh: THREE.Mesh) {
+    // Remove all children that are text meshes
+    const removable: THREE.Object3D[] = [];
+    mesh.children.forEach((child) => {
+      if (child.userData && child.userData.isText) {
+        removable.push(child);
+      }
+    });
+    removable.forEach((child) => mesh.remove(child));
+  }
+
+  function updateLeaderboardText() {
+    // Only proceed if font and meshes are loaded
+    if (!font || !firstMesh || !secondMesh || !thirdMesh) return;
+
+    // Clear old text
+    clearOldText(firstMesh);
+    clearOldText(secondMesh);
+    clearOldText(thirdMesh);
+
+    const firstData = leaderboard[0] || { rank: 1, name: 'Unknown', points: 0 };
+    const secondData = leaderboard[1] || { rank: 2, name: 'Unknown', points: 0 };
+    const thirdData = leaderboard[2] || { rank: 3, name: 'Unknown', points: 0 };
+
+    addLeaderboardText(firstMesh, `#${firstData.rank}st`, firstData.name, `${firstData.points}pts`);
+    addLeaderboardText(secondMesh, `#${secondData.rank}nd`, secondData.name, `${secondData.points}pts`);
+    addLeaderboardText(thirdMesh, `#${thirdData.rank}rd`, thirdData.name, `${thirdData.points}pts`);
+  }
+
+  function addLeaderboardText(
+    parentMesh: THREE.Mesh,
+    rankText: string,
+    originalUsernameText: string,
+    pointsText: string
+  ) {
+    const rankGeometry = new TextGeometry(rankText, textParams);
+    const rankMesh = new THREE.Mesh(rankGeometry, textMaterial);
+    rankMesh.userData.isText = true;
+
+    const pointsGeometry = new TextGeometry(pointsText, textParams);
+    const pointsMesh = new THREE.Mesh(pointsGeometry, textMaterial);
+    pointsMesh.userData.isText = true;
+
+    parentMesh.add(rankMesh);
+    parentMesh.add(pointsMesh);
+
+    // Position rank and points relative to the plane (parentMesh)
+    rankMesh.position.set(-0.236, 0, -0.018);
+    pointsMesh.position.set(0.14, 0, -0.018);
+
+    // We'll place the username at a fixed starting point from the plane
+    const usernameStartX = -0.13;  // Adjust as needed
+    const usernameY = 0;
+    const usernameZ = -0.018;
+
+    const usernamePointsMargin = 0.01;
+    const pointsBox = new THREE.Box3().setFromObject(pointsMesh);
+    const pointsSize = new THREE.Vector3();
+    pointsBox.getSize(pointsSize);
+
+    const maxUsernameWidth = (pointsMesh.position.x - usernamePointsMargin) - usernameStartX;
+
+    function measureUsernameWidth(usernameStr: string): number {
+      const testGeometry = new TextGeometry(usernameStr, textParams);
+      const testMesh = new THREE.Mesh(testGeometry, textMaterial);
+      testMesh.position.set(usernameStartX, usernameY, usernameZ);
+
+      parentMesh.add(testMesh);
+      const testBox = new THREE.Box3().setFromObject(testMesh);
+      parentMesh.remove(testMesh);
+
+      const testSize = new THREE.Vector3();
+      testBox.getSize(testSize);
+      return testSize.x;
+    }
+
+    let usernameText = originalUsernameText;
+    let usernameWidth = measureUsernameWidth(usernameText);
+
+    if (usernameWidth > maxUsernameWidth) {
+      while (usernameText.length > 0 && usernameWidth > maxUsernameWidth) {
+        usernameText = usernameText.slice(0, -1); // remove last character
+        const testText = usernameText + '..';
+        usernameWidth = measureUsernameWidth(testText);
+
+        if (usernameWidth <= maxUsernameWidth) {
+          usernameText = testText;
+          break;
+        }
+      }
+    }
+
+    const usernameGeometry = new TextGeometry(usernameText, textParams);
+    const usernameMesh = new THREE.Mesh(usernameGeometry, textMaterial);
+    usernameMesh.userData.isText = true;
+    parentMesh.add(usernameMesh);
+    usernameMesh.position.set(usernameStartX, usernameY, usernameZ);
+
+    // Make all text face the camera
+    rankMesh.lookAt(camera.position);
+    usernameMesh.lookAt(camera.position);
+    pointsMesh.lookAt(camera.position);
+  }
 </script>
 
 <style>
-  /* Fullscreen container for Three.js */
   .scene-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: transparent; /* Ensure the container background is transparent */
+    background: transparent;
     overflow: hidden;
   }
-
 </style>
 
-<!-- Fullscreen Transparent Three.js scene -->
 <div bind:this={sceneContainer} class="scene-container"></div>
