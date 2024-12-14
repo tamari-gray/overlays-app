@@ -40,6 +40,10 @@
 
   const leaderboardRef = ref(database, 'leaderboard');
 
+  // Animation related
+  let mixer: THREE.AnimationMixer | undefined;
+  const clock = new THREE.Clock();
+
   // Listen to Firebase updates
   onValue(leaderboardRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -71,11 +75,11 @@
        viewHeight,
       -viewHeight,
        0.1,
-       40
+       50
     );
     camera.position.z = 5;
 
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, precision: 'highp' });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setClearColor(0x000000, 0);
@@ -133,6 +137,16 @@
         model.position.set(0, -1, -2);
         scene.add(model);
 
+        // Setup animation
+        mixer = new THREE.AnimationMixer(model);
+        const clip = THREE.AnimationClip.findByName(gltf.animations, 'leaderboardAnimation');
+        if (clip) {
+          const action = mixer.clipAction(clip);
+          action.play();
+        } else {
+          console.warn('No animation named "leaderboardAnimation" found');
+        }
+
         // Load the font after the model is added
         const fontLoader = new FontLoader();
         fontLoader.load(
@@ -150,6 +164,11 @@
             // Render loop
             const animate = () => {
               requestAnimationFrame(animate);
+
+              // Update animation mixer
+              const delta = clock.getDelta();
+              if (mixer) mixer.update(delta);
+
               renderer.render(scene, camera);
             };
             animate();
@@ -223,12 +242,12 @@
     parentMesh.add(pointsMesh);
 
     // Position rank and points relative to the plane (parentMesh)
-    rankMesh.position.set(-0.236, 0, -0.018);
-    pointsMesh.position.set(0.14, 0, -0.018);
+    rankMesh.position.set(-0.236, -0.01, -0.018);
+    pointsMesh.position.set(0.14, -0.01, -0.018);
 
     // We'll place the username at a fixed starting point from the plane
     const usernameStartX = -0.13;  // Adjust as needed
-    const usernameY = 0;
+    const usernameY = -0.01;
     const usernameZ = -0.018;
 
     const usernamePointsMargin = 0.01;
