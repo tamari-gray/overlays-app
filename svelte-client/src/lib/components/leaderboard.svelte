@@ -68,15 +68,15 @@
     // Set up scene, camera, renderer
     scene = new THREE.Scene();
     const aspectRatio = window.innerWidth / window.innerHeight;
-    const viewHeight = 1;
     camera = new THREE.OrthographicCamera(
-      -aspectRatio * viewHeight,
-       aspectRatio * viewHeight,
-       viewHeight,
-      -viewHeight,
-       0.1,
-       50
+        -aspectRatio * 1,  // left
+        aspectRatio * 1,   // right
+        1,            // top
+        -1,           // bottom
+        0.01,         // near
+        1000          // far
     );
+
     camera.position.z = 5;
 
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, precision: 'highp' });
@@ -126,6 +126,12 @@
               });
             }
 
+            if(mesh.name =='icon'){
+              console.log('icon', mesh);
+              // mesh.material[0].transparent = true;
+              mesh.renderOrder = 100;
+            }
+
             // Identify the board meshes
             if (mesh.name === 'first') firstMesh = mesh;
             if (mesh.name === 'second') secondMesh = mesh;
@@ -139,7 +145,7 @@
 
         // Setup animation
         mixer = new THREE.AnimationMixer(model);
-        const clip = THREE.AnimationClip.findByName(gltf.animations, 'leaderboardAnimation');
+        const clip = THREE.AnimationClip.findByName(gltf.animations, 'Action.001');
         if (clip) {
           const action = mixer.clipAction(clip);
           action.play();
@@ -156,7 +162,7 @@
             textParams = {
               font: font,
               size: 0.04,
-              depth: 0.005,
+              depth: 0.0001,
               curveSegments: 12,
             };
             textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -230,6 +236,7 @@
     originalUsernameText: string,
     pointsText: string
   ) {
+    if(rankText == '#1st') console.log(parentMesh);
     const rankGeometry = new TextGeometry(rankText, textParams);
     const rankMesh = new THREE.Mesh(rankGeometry, textMaterial);
     rankMesh.userData.isText = true;
@@ -242,12 +249,13 @@
     parentMesh.add(pointsMesh);
 
     // Position rank and points relative to the plane (parentMesh)
-    rankMesh.position.set(-0.236, -0.01, -0.018);
-    pointsMesh.position.set(0.14, -0.01, -0.018);
+    
+    rankMesh.position.set(-0.236, -0.001, -0.018);
+    pointsMesh.position.set(0.14, -0.001, -0.018);
 
     // We'll place the username at a fixed starting point from the plane
     const usernameStartX = -0.13;  // Adjust as needed
-    const usernameY = -0.01;
+    const usernameY = -0.001;
     const usernameZ = -0.018;
 
     const usernamePointsMargin = 0.01;
@@ -288,15 +296,28 @@
     }
 
     const usernameGeometry = new TextGeometry(usernameText, textParams);
+    usernameGeometry.computeBoundingBox();
+    
     const usernameMesh = new THREE.Mesh(usernameGeometry, textMaterial);
     usernameMesh.userData.isText = true;
+    console.log(parentMesh.quaternion);
+    
+
     parentMesh.add(usernameMesh);
     usernameMesh.position.set(usernameStartX, usernameY, usernameZ);
 
+
     // Make all text face the camera
-    rankMesh.lookAt(camera.position);
-    usernameMesh.lookAt(camera.position);
-    pointsMesh.lookAt(camera.position);
+    // rankMesh.lookAt(camera.position);
+    // usernameMesh.lookAt(camera.position);
+    // pointsMesh.lookAt(camera.position);
+    rankMesh.quaternion.copy(parentMesh.quaternion);
+    rankMesh.quaternion.x = 0.7;
+    usernameMesh.quaternion.copy(parentMesh.quaternion);
+    usernameMesh.quaternion.x = 0.7;
+    pointsMesh.quaternion.copy(parentMesh.quaternion);
+    pointsMesh.quaternion.x = 0.7;
+    
   }
 </script>
 
