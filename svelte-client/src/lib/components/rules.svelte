@@ -78,6 +78,7 @@
 
        model.scale.set(1.5,1.5,1.5);
        model.position.set(0, -2, 0);
+
        scene.add(model);
 
        // Set up animation if available
