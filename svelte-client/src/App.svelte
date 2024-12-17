@@ -6,6 +6,7 @@
   import Rules from './lib/components/rules.svelte';
   import Timer from './lib/components/timer.svelte';
   import Flag from './lib/components/flag.svelte';
+  import Voting from './lib/components/voting.svelte';
 
 </script>
 
@@ -17,6 +18,7 @@
     <Route path="/rules" component={Rules} />
     <Route path="/flag" component={Flag} />
     <Route path="/timer" component={Timer} />
+    <Route path="/voting" component={Voting} />
 
   </Router>
 </main>
