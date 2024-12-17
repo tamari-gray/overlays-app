@@ -1,24 +1,52 @@
-require('dotenv').config()
+// Load environment variables from .env file
+require('dotenv').config();
 
+// Import required modules
 const express = require('express');
 const firebaseAdmin = require('firebase-admin');
-const bodyParser = require('body-parser');
+const fs = require('fs');       // File System module
+const path = require('path');   // Path module
+
 const app = express();
 
-// Load Firebase service account key
-const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Load Firebase service account key from file
+const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH;
+
+if (!serviceAccountPath) {
+  console.error('Error: SERVICE_ACCOUNT_PATH is not defined in the environment variables.');
+  process.exit(1); // Exit the application if the path is not defined
+}
+
+let serviceAccount;
+try {
+  // Resolve the absolute path to the service account JSON file
+  const absolutePath = path.resolve(serviceAccountPath);
+  
+  // Read the service account JSON file synchronously
+  const serviceAccountContent = fs.readFileSync(absolutePath, 'utf-8');
+  
+  // Parse the JSON content
+  serviceAccount = JSON.parse(serviceAccountContent);
+} catch (error) {
+  console.error('Failed to load or parse service account JSON:', error);
+  process.exit(1); // Exit the application if there's an error
+}
 
 // Initialize Firebase Admin SDK with Realtime Database
 firebaseAdmin.initializeApp({
   credential: firebaseAdmin.credential.cert(serviceAccount),
-  databaseURL: "https://predict-bot-66888-default-rtdb.asia-southeast1.firebasedatabase.app/"  // Replace with your Firebase Realtime Database URL
+  databaseURL: process.env.DATABASE_URL || "https://predict-bot-66888-default-rtdb.asia-southeast1.firebasedatabase.app/"
 });
 
 const db = firebaseAdmin.database();
 
-app.use(bodyParser.json());
+// Variable to hold the timer interval to prevent multiple timers
+let timerInterval = null;
 
-// Route to handle adding personName to Firebase Realtime Database
+// Route to handle adding personName to Firebase Realtime Database and start timer
 app.post('/startPrediction', async (req, res) => {
   console.log("Received /startPrediction request with payload:", req.body);
 
@@ -30,16 +58,47 @@ app.post('/startPrediction', async (req, res) => {
   }
 
   try {
+    // If a timer is already running, prevent starting another one
+    if (timerInterval) {
+      console.error("Error: A prediction timer is already running.");
+      return res.status(400).json({ error: 'A prediction is already in progress.' });
+    }
+
     // Storing the single prediction at the root level under 'prediction'
     const predictionRef = db.ref('prediction'); // Fixed key instead of dynamic push
     await predictionRef.set({
       person: personName,
       createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
-      winVotePercentage: null // Placeholder for winVotePercentage, to be updated later
+      timer: 30 // Initialize timer with 30 seconds
     });
 
     console.log(`Started prediction for ${personName}`);
     res.status(200).json({ message: `Prediction started for ${personName}` });
+
+    // Start a 30-second countdown timer
+    let timeLeft = 30; // seconds
+
+    timerInterval = setInterval(async () => {
+      timeLeft -= 1;
+      if (timeLeft >= 0) {
+        try {
+          await predictionRef.update({ timer: timeLeft });
+          console.log(`Timer updated: ${timeLeft} seconds remaining`);
+        } catch (error) {
+          console.error("Error updating timer in Firebase Realtime Database:", error);
+          // Optionally, clear the interval if there's an error
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      } else {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        console.log("Timer completed");
+        // Optionally, perform actions when the timer completes
+        // For example, finalize the prediction or notify users
+      }
+    }, 1000); // Update every second
+
   } catch (error) {
     console.error("Error adding prediction to Firebase Realtime Database:", error);
     res.status(500).json({ error: 'Failed to start prediction' });
@@ -80,7 +139,7 @@ app.post('/updatePrediction', async (req, res) => {
   }
 });
 
-
+// Route to handle leaderboard data
 app.post('/leaderboard', async (req, res) => {
   console.log("Received leaderboard data:", req.body);
 
