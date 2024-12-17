@@ -29,6 +29,44 @@ public class CPHInline
     
     
     // TALK TO SERVER METHODS:
+    public bool updateTimer(int number)
+    {
+        string url = "https://overlays-app.onrender.com/timer"; // Update with your server URL
+
+        // Create the payload as a JSON object. Adjust the property name as required by your API.
+        var payload = JsonConvert.SerializeObject(new { number });
+
+        using (var client = new HttpClient())
+        {
+            // Set up the content for the POST request
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            try
+            {
+                // Send POST request to the server asynchronously and get the response
+                var response = client.PostAsync(url, content).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Success, send a message or log it
+                    CPH.SendMessage("Number sent successfully!");
+                    return true;
+                }
+                else
+                {
+                    // Failure, log the error with status code
+                    CPH.SendMessage($"Failed to send number. Status Code: {response.StatusCode}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle any exceptions (e.g., network errors) and log the error message
+                CPH.SendMessage($"Error sending number: {ex.Message}");
+                return false;
+            }
+        }
+    }
     
     public bool initPredictInDb()
 	{
