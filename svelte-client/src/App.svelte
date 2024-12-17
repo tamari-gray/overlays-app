@@ -4,6 +4,7 @@
   import winPercentage from './lib/components/winPercentage.svelte';
   import StreamInfo from './lib/components/streamInfo.svelte';
   import Rules from './lib/components/rules.svelte';
+  import Timer from './lib/components/timer.svelte';
   import Flag from './lib/components/flag.svelte';
 
 </script>
@@ -15,6 +16,7 @@
     <Route path="/stream-info" component={StreamInfo} />
     <Route path="/rules" component={Rules} />
     <Route path="/flag" component={Flag} />
+    <Route path="/timer" component={Timer} />
 
   </Router>
 </main>
