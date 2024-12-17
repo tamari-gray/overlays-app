@@ -1,44 +1,27 @@
 // Load environment variables from .env file
 require('dotenv').config();
 
-// Import required modules
 const express = require('express');
 const firebaseAdmin = require('firebase-admin');
-const fs = require('fs');       // File System module
-const path = require('path');   // Path module
-
+const bodyParser = require('body-parser');
 const app = express();
 
 // Middleware to parse JSON bodies
-app.use(express.json());
+app.use(bodyParser.json()); // Alternatively, use express.json()
 
-// Load Firebase service account key from file
-const serviceAccountPath = process.env.SERVICE_ACCOUNT_PATH;
-
-if (!serviceAccountPath) {
-  console.error('Error: SERVICE_ACCOUNT_PATH is not defined in the environment variables.');
-  process.exit(1); // Exit the application if the path is not defined
-}
-
+// Load Firebase service account key
 let serviceAccount;
 try {
-  // Resolve the absolute path to the service account JSON file
-  const absolutePath = path.resolve(serviceAccountPath);
-  
-  // Read the service account JSON file synchronously
-  const serviceAccountContent = fs.readFileSync(absolutePath, 'utf-8');
-  
-  // Parse the JSON content
-  serviceAccount = JSON.parse(serviceAccountContent);
+  serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_JSON);
 } catch (error) {
-  console.error('Failed to load or parse service account JSON:', error);
+  console.error('Failed to parse SERVICE_ACCOUNT_JSON:', error);
   process.exit(1); // Exit the application if there's an error
 }
 
 // Initialize Firebase Admin SDK with Realtime Database
 firebaseAdmin.initializeApp({
   credential: firebaseAdmin.credential.cert(serviceAccount),
-  databaseURL: process.env.DATABASE_URL || "https://predict-bot-66888-default-rtdb.asia-southeast1.firebasedatabase.app/"
+  databaseURL: process.env.DATABASE_URL || "https://predict-bot-66888-default-rtdb.asia-southeast1.firebasedatabase.app/"  // Replace with your Firebase Realtime Database URL
 });
 
 const db = firebaseAdmin.database();
@@ -69,6 +52,7 @@ app.post('/startPrediction', async (req, res) => {
     await predictionRef.set({
       person: personName,
       createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
+      winVotePercentage: null, // Placeholder for winVotePercentage, to be updated later
       timer: 30 // Initialize timer with 30 seconds
     });
 
@@ -139,7 +123,6 @@ app.post('/updatePrediction', async (req, res) => {
   }
 });
 
-// Route to handle leaderboard data
 app.post('/leaderboard', async (req, res) => {
   console.log("Received leaderboard data:", req.body);
 
