@@ -2,6 +2,11 @@
   import { onMount } from 'svelte';
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+  import { Font, FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+  import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
+  import { database, ref, onValue } from '../firebase'; // Adjust path if needed
+
+
  
   let sceneContainer: HTMLDivElement | null = null;
  
@@ -10,6 +15,37 @@
   let renderer: THREE.WebGLRenderer;
   let mixer: THREE.AnimationMixer | undefined;
   const clock = new THREE.Clock();
+
+  //three.js scene
+  let winMesh: THREE.Mesh | undefined;
+  let loseMesh: THREE.Mesh | undefined;
+  let font: Font | undefined;
+  let textMaterial: THREE.MeshBasicMaterial;
+  let textParams: {
+    font: Font;
+    size: number;
+    depth: number;
+    curveSegments: number;
+  };
+
+  let username: string = '';
+  const usernameRef = ref(database, 'prediction/person');
+
+
+  // Listen to Firebase updates
+  onValue(usernameRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.val() as string;
+      username = data;
+    } else {
+      username = '';
+    }
+    console.log('username updated:', username);
+
+    // Update text in the scene after leaderboard updates
+    updateUsername();
+  });
+
  
   onMount(() => {
     if (!sceneContainer) return;
@@ -73,6 +109,24 @@
                 color: mesh.material.color,
               });
             }
+
+            // console.log(mesh.name, mesh);
+
+
+            if(mesh.name =='heartBannerRedBroken' || mesh.name =='HeartBannerGreen'){
+              // mesh.material[0].transparent = true;
+              mesh.renderOrder = 100;
+            }
+
+            // Identify the board meshes
+            if (mesh.name === 'win') {
+              winMesh = mesh;
+              console.log('winMesh found:', winMesh);
+            }
+            if (mesh.name === 'lose') {
+              loseMesh = mesh;
+              console.log('loseMesh found:', loseMesh);
+            }
           }
         });
  
@@ -88,17 +142,44 @@
           const action = mixer.clipAction(clip);
           action.play();
         }
- 
-        const animate = () => {
-          requestAnimationFrame(animate);
-          const delta = clock.getDelta();
-          if (mixer) mixer.update(delta);
-          renderer.render(scene, camera);
-        };
-        animate();
+        // Load the font after the model is added
+        const fontLoader = new FontLoader();
+        fontLoader.load(
+          '/fonts/burbank.json',
+          (loadedFont) => {
+            font = loadedFont;
+            textParams = {
+              font: font,
+              size: 0.04,
+              depth: 0.001,
+              curveSegments: 12,
+            };
+            textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            // Render loop
+            const animate = () => {
+              requestAnimationFrame(animate);
+
+              // Update animation mixer
+              const delta = clock.getDelta();
+              if (mixer) mixer.update(delta);
+
+              renderer.render(scene, camera);
+            };
+            animate();
+
+            // Once everything is ready, we can update the text based on current leaderboard data
+            updateUsername();
+          }, (xhr) => {
+            console.log(`Font loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
+          },
+          (error) => {
+            console.error('Error loading font:', error);
+          }
+        );
       },
       (progress) => {
-        console.log(`Loading: ${(progress.loaded / progress.total) * 100}%`);
+        console.log('loading lana', progress);
       },
       (error) => {
         console.error('Error loading GLTF model:', error);
@@ -124,6 +205,71 @@
       sceneContainer?.removeChild(renderer.domElement);
     };
   });
+
+  function updateUsername() {
+    // Only proceed if font and meshes are loaded
+    if (!font || !winMesh || !loseMesh) return;
+
+    // Clear old text
+    clearOldText(winMesh);
+    clearOldText(loseMesh);
+
+    addText(winMesh, username, 'lose');
+    addText(loseMesh, username, 'win');
+  }
+
+  function clearOldText(mesh: THREE.Mesh) {
+    // Remove all children that are text meshes
+    const removable: THREE.Object3D[] = [];
+    mesh.children.forEach((child) => {
+      if (child.userData && child.userData.isText) {
+        removable.push(child);
+      }
+    });
+    removable.forEach((child) => mesh.remove(child));
+  }
+
+  function addText(
+    parentMesh: THREE.Mesh,
+    name: string,
+    type: 'win' | 'lose' // Specify the type of text to add
+  ) {
+    let textString: string;
+    
+    if (type === 'win') {
+      textString = `!win: vote ${name} to win`;
+    } else if (type === 'lose') {
+      textString = `!lose: vote ${name} to lose`;
+    } else {
+      console.warn('Unknown text type:', type);
+      return;
+    }
+
+    console.log(`Adding text to ${type}Mesh:`, textString);
+
+    // Create Text Geometry
+    const geometry = new TextGeometry(textString, textParams);
+    geometry.computeBoundingBox();
+    const textMesh = new THREE.Mesh(geometry, textMaterial);
+    textMesh.userData.isText = true;
+
+    // Add text to parent mesh
+    parentMesh.add(textMesh);
+
+    // Position the text relative to the parent mesh
+    if (type === 'win') {
+      textMesh.position.set(-0.351, 1.21, 0.2999); // Adjust Y as needed
+    } else if (type === 'lose') {
+      textMesh.position.set(-0.346, 1.143, 0.2999); // Adjust Y as needed
+
+    }
+
+    console.log(`${type} text added at position:`, textMesh.position);
+    textMesh.quaternion.copy(parentMesh.quaternion);
+    textMesh.quaternion.y= 0;
+    textMesh.quaternion.z = 0.036;
+  }
+
  </script>
  
  <style>
@@ -139,4 +285,3 @@
  </style>
  
  <div bind:this={sceneContainer} class="scene-container"></div>
- 
