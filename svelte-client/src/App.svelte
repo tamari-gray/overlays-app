@@ -8,6 +8,7 @@
   import Flag from './lib/components/flag.svelte';
   import Voting from './lib/components/voting.svelte';
   import LosePercentage from './lib/components/losePercentage.svelte';
+  import Boxing from './lib/components/boxing.svelte';
 
 </script>
 
@@ -21,6 +22,7 @@
     <Route path="/flag" component={Flag} />
     <Route path="/timer" component={Timer} />
     <Route path="/voting" component={Voting} />
+    <Route path="/boxing" component={Boxing} />
 
   </Router>
 </main>
