@@ -17,6 +17,14 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Black';
+  src: url('/fonts/BurbankBigCondensed-Black.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+
 a {
   font-weight: 500;
   color: #646cff;

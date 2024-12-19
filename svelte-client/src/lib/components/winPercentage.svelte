@@ -2,9 +2,8 @@
   import { onMount } from 'svelte';
   import { onValue, ref, database } from '../firebase'; // Import Firebase setup
 
-  let winPercent = 0; // Default values
+  let winPercent = 0; // Default value
   let name = '';
-  let losePercent = 0;
 
   onMount(() => {
     const predictionRef = ref(database, 'prediction'); // Reference to 'prediction' in Firebase
@@ -14,17 +13,12 @@
         const data = snapshot.val(); // Get the raw data
         const prediction = data; // Extract the prediction object
 
-        // Check for both winVotePercentage and loseVotePercentage
-        if (
-          prediction.winVotePercentage == null || 
-          prediction.loseVotePercentage == null
-        ) {
+        // Check for winVotePercentage
+        if (prediction.winVotePercentage == null) {
           winPercent = 50;
-          losePercent = 50;
         } else {
-          // Use the values from Firebase
+          // Use the value from Firebase
           winPercent = prediction.winVotePercentage;
-          losePercent = prediction.loseVotePercentage;
         }
 
         name = prediction.person || ''; // Use an empty string as fallback for name
@@ -35,79 +29,43 @@
   });
 </script>
 
-
 <style>
- .win-percentage {
-   width: 1440px;
-   height: 270px;
-   display: flex;
-   position: relative;
-   font-size: 36px;
- }
 
- .win {
-   background-color: red;
-   width: var(--win-width);
-   display: flex;
-   justify-content: center;
-   align-items: center;
-   color: white;
-   font-weight: bold;
-   text-align: center;
-   padding: 10px;
- }
 
- .lose {
-   background-color: blue;
-   width: calc(100% - var(--win-width));
-   display: flex;
-   justify-content: center;
-   align-items: center;
-   color: white;
-   font-weight: bold;
-   text-align: center;
-   padding: 10px;
- }
+  /* Make the entire window's background transparent */
+  :global(html, body) {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
 
- /* Hide text when percentage is below 15% */
- .low-percentage .label-text {
-   display: none;
- }
+  /* Container to center content */
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Full viewport height */
+    width: 100vw;  /* Full viewport width */
+    overflow: hidden; /* Prevent scrolling */
+  }
 
- .low-percentage .percentage-text {
-   font-weight: bold;
- }
+  .win-percentage {
+    font-family: 'black';
+    font-size: 128px; /* Adjust the size as needed */
+    font-weight: bold;
+    text-align: center;
+    color: #fff; /* Example color */
+    margin: 20px;
+    background: transparent; /* Ensure background is transparent */
+  }
+
 </style>
 
-<div class="win-percentage" style="--win-width: {winPercent}%">
-  {#if winPercent === 100}
-    <!-- Only show the win bar when winPercent is 100 -->
-    <div class="win">
-      <span class="label-text">100% voted {name} wins</span>
-    </div>
-  {:else if losePercent === 100}
-    <!-- Only show the lose bar when losePercent is 100 -->
-    <div class="lose">
-      <span class="label-text">100% voted {name} loses</span>
-    </div>
-  {:else}
-    <!-- Normal rendering when neither percentage is 100 -->
-    <div class="win {winPercent < 15 ? 'low-percentage' : ''}">
-      <span class="label-text">
-        {winPercent >= 15 ? `${winPercent}% voted ${name} wins` : ''}
-      </span>
-      <span class="percentage-text">
-        {winPercent < 15 ? `${winPercent}%` : ''}
-      </span>
-    </div>
-    <div class="lose {losePercent < 15 ? 'low-percentage' : ''}">
-      <span class="label-text">
-        {losePercent >= 15 ? `${losePercent}% voted ${name} loses` : ''}
-      </span>
-      <span class="percentage-text">
-        {losePercent < 15 ? `${losePercent}%` : ''}
-      </span>
-    </div>
-  {/if}
+<div class="container">
+  <div class="win-percentage">
+    {winPercent}% voted <br />
+    {name} Wins!
+  </div>
 </div>
-
